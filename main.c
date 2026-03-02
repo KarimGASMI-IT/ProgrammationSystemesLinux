@@ -49,21 +49,21 @@ union semun {
 
 static void sem_P(void) {
     struct sembuf op = {0, -1, 0};
-    if (semop(semid, &op, 1) == -1) {
-        perror("semop P");
-        _exit(1);
-    }
+    semop(semid, &op, 1);
 }
 
 static void sem_V(void) {
     struct sembuf op = {0, +1, 0};
-    if (semop(semid, &op, 1) == -1) {
-        perror("semop V");
-        _exit(1);
-    }
+    semop(semid, &op, 1);
 }
 
 /* ================= UTILS ================= */
+
+static void timestamp() {
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    printf("[%02d:%02d:%02d] ", t->tm_hour, t->tm_min, t->tm_sec);
+}
 
 static int rand_range(int min, int max) {
     return min + rand() % (max - min + 1);
@@ -98,7 +98,6 @@ static void tiny_sleep(long ms) {
 
 static void cleanup_ipc(void) {
     if (getpid() != chef_pid) return;
-
     if (shm) shmdt(shm);
     if (shmid != -1) shmctl(shmid, IPC_RMID, NULL);
     if (semid != -1) semctl(semid, 0, IPC_RMID);
@@ -123,27 +122,22 @@ static pertes_t compute_total(void) {
 
 static void print_final_report(void) {
     pertes_t total = compute_total();
-    time_t now = time(NULL);
 
-    printf("\n\n==============================\n");
+    printf("\n==============================\n");
     printf("        FIN DE LA CONQUETE\n");
     printf("==============================\n");
-    printf("Date : %s\n", ctime(&now));
 
-    printf("Structures engagees :\n");
-    printf("  Divisions  : %d\n", NB_DIV);
-    printf("  Regiments  : %d\n", NB_DIV * NB_REG);
-    printf("  Compagnies : %d\n\n", NB_DIV * NB_REG * NB_COMP);
+    printf("Divisions  : %d\n", NB_DIV);
+    printf("Regiments  : %d\n", NB_DIV * NB_REG);
+    printf("Compagnies : %d\n\n", NB_DIV * NB_REG * NB_COMP);
 
-    printf("Pertes alliees :\n");
-    printf("  Morts   : %d\n", total.morts);
-    printf("  Blesses : %d\n\n", total.blesses);
+    printf("Pertes alliees : morts=%d blesses=%d\n",
+           total.morts, total.blesses);
 
-    printf("Pertes ennemies :\n");
-    printf("  Morts       : %d\n", total.ennemis_morts);
-    printf("  Prisonniers : %d\n\n", total.prisonniers);
+    printf("Pertes ennemies : morts=%d prisonniers=%d\n",
+           total.ennemis_morts, total.prisonniers);
 
-    printf("Simulation terminee proprement.\n");
+    printf("\nSimulation terminee proprement.\n");
     printf("Ressources IPC liberees.\n");
     printf("==============================\n\n");
 }
@@ -152,7 +146,7 @@ static void print_final_report(void) {
 
 static void handle_sigterm(int sig) {
     (void)sig;
-    _exit(0);  // enfants meurent immédiatement
+    _exit(0);
 }
 
 static void handle_sigint(int sig) {
@@ -162,15 +156,12 @@ static void handle_sigint(int sig) {
         _exit(0);
 
     printf("\nArret de la simulation...\n");
-    fflush(stdout);
 
-    /* Ignorer SIGTERM pour le chef */
     struct sigaction sa_ignore;
     memset(&sa_ignore, 0, sizeof(sa_ignore));
     sa_ignore.sa_handler = SIG_IGN;
     sigaction(SIGTERM, &sa_ignore, NULL);
 
-    /* Tuer tous les enfants */
     kill(0, SIGTERM);
 
     tiny_sleep(200);
@@ -212,10 +203,14 @@ static void run_compagnie(int d, int r, int c) {
         shm->compagnies[d][r][c] = p;
         sem_V();
 
-        printf("Compagnie D%d R%d C%d : morts=%d blesses=%d ennemis=%d prisonniers=%d\n",
-               d, r, c, p.morts, p.blesses, p.ennemis_morts, p.prisonniers);
-        fflush(stdout);
+        timestamp();
+        printf("Compagnie C%d du Regiment R%d de la Division D%d envoie : "
+               "morts=%d blesses=%d ennemis=%d prisonniers=%d\n",
+               c, r, d,
+               p.morts, p.blesses,
+               p.ennemis_morts, p.prisonniers);
 
+        fflush(stdout);
         tiny_sleep(rand_range(300, 1500));
     }
 }
@@ -248,7 +243,10 @@ static void run_regiment(int d, int r) {
         shm->regiments[d][r] = sum;
         sem_V();
 
-        tiny_sleep(rand_range(200, 800));
+        timestamp();
+        printf("Regiment R%d (Division D%d) transmet a la division\n", r, d);
+
+        tiny_sleep(rand_range(400, 900));
     }
 }
 
@@ -280,7 +278,10 @@ static void run_division(int d) {
         shm->divisions[d] = sum;
         sem_V();
 
-        tiny_sleep(rand_range(300, 1000));
+        timestamp();
+        printf("Division D%d transmet a l'armee\n", d);
+
+        tiny_sleep(rand_range(500, 1000));
     }
 }
 
@@ -298,10 +299,12 @@ static void run_armee(void) {
         sleep(10);
         pertes_t total = compute_total();
 
-        printf("\n===== ETAT GENERAL =====\n");
-        printf("Allies : morts=%d blesses=%d\n", total.morts, total.blesses);
-        printf("Ennemis : morts=%d prisonniers=%d\n", total.ennemis_morts, total.prisonniers);
-        printf("========================\n\n");
+        printf("\n===== ETAT GENERAL DU GENERAL =====\n");
+        printf("Allies : morts=%d blesses=%d\n",
+               total.morts, total.blesses);
+        printf("Ennemis : morts=%d prisonniers=%d\n",
+               total.ennemis_morts, total.prisonniers);
+        printf("====================================\n\n");
         fflush(stdout);
     }
 }
