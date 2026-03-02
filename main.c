@@ -123,7 +123,6 @@ static pertes_t compute_total(void) {
 
 static void print_final_report(void) {
     pertes_t total = compute_total();
-
     time_t now = time(NULL);
 
     printf("\n\n==============================\n");
@@ -153,7 +152,7 @@ static void print_final_report(void) {
 
 static void handle_sigterm(int sig) {
     (void)sig;
-    _exit(0);
+    _exit(0);  // enfants meurent immédiatement
 }
 
 static void handle_sigint(int sig) {
@@ -162,12 +161,23 @@ static void handle_sigint(int sig) {
     if (getpid() != chef_pid)
         _exit(0);
 
+    printf("\nArret de la simulation...\n");
+    fflush(stdout);
+
+    /* Ignorer SIGTERM pour le chef */
+    struct sigaction sa_ignore;
+    memset(&sa_ignore, 0, sizeof(sa_ignore));
+    sa_ignore.sa_handler = SIG_IGN;
+    sigaction(SIGTERM, &sa_ignore, NULL);
+
+    /* Tuer tous les enfants */
     kill(0, SIGTERM);
 
     tiny_sleep(200);
 
     print_final_report();
     cleanup_ipc();
+
     _exit(0);
 }
 
@@ -224,6 +234,7 @@ static void run_regiment(int d, int r) {
 
     while (1) {
         pertes_t local[NB_COMP];
+
         sem_P();
         for (int c = 0; c < NB_COMP; c++)
             local[c] = shm->compagnies[d][r][c];
@@ -308,24 +319,10 @@ int main(void) {
     if (key == -1) key = IPC_PRIVATE;
 
     shmid = shmget(key, sizeof(armee_t), IPC_CREAT | 0666);
-    if (shmid == -1) {
-        perror("shmget");
-        exit(1);
-    }
-
     shm = shmat(shmid, NULL, 0);
-    if (shm == (void*)-1) {
-        perror("shmat");
-        exit(1);
-    }
-
     memset(shm, 0, sizeof(*shm));
 
     semid = semget(key, 1, IPC_CREAT | 0666);
-    if (semid == -1) {
-        perror("semget");
-        exit(1);
-    }
 
     union semun arg;
     arg.val = 1;
