@@ -1,227 +1,201 @@
 # ProgrammationSystèmesLinux
 Évaluation M1 SRC / Programmation Systèmes sous Linux / Langage C / Mr Malinge
 
-make clean
-make
-./simulation
+# Simulation de Conquête Militaire  
+## Programmation Système sous Linux – M1 Systèmes, Réseaux & Cloud Computing
 
+---
 
-ps -ef | grep simulation
-ipcs
+## Objectif du projet
 
-J'aimerai qu'on rajoute dans le programme qu'on affiche affiche aussi les valeurs transmises par les régiments et divisions (actuellement ils transmettent sans montrer les chiffres) et que les différentes structures remontent des informations sur la 
-progression sur le terrain (avancée de x km, recul de y km...)
+Ce programme simule une conquête militaire en respectant une hiérarchie réelle :
 
-🪖 Simulation de Conquête Militaire
-Évaluation ESGI-M1 SRC / Programmation Systèmes sous Linux / Langage C / Mr Malinge
+- 1 Armée (Général)
+- 3 Divisions
+- 3 Régiments par division
+- 5 Compagnies par régiment
+- 150 hommes par compagnie (simulation logique)
 
-📌 Description du projet
+Chaque entité est représentée par **un processus Unix distinct**.
 
-Ce projet implémente une simulation hiérarchique d’une armée en conquête, en utilisant :
-📦 Processus multiples (fork)
-🧠 Mémoire partagée System V
-🔐 Sémaphores System V
-📡 Gestion avancée des signaux (SIGINT, SIGTERM)
-🧹 Nettoyage propre des ressources IPC
+La communication entre les niveaux hiérarchiques se fait via :
 
-L’objectif est de modéliser la remontée d’informations militaires à travers plusieurs niveaux hiérarchiques.
-🏗 Architecture de l’armée simulée
+- Segments de mémoire partagée (System V)
+- Sémaphores (mutex) pour assurer l'exclusion mutuelle
 
-L’organisation est strictement hiérarchique :
-Armée (1 processus - Général)
- ├── 3 Divisions
- │     ├── 3 Régiments chacune
- │     │     ├── 5 Compagnies chacune
-🔢 Nombre total de processus
+Le général affiche l'état global de la conquête toutes les 10 secondes.
 
-1 Armée
+---
 
-3 Divisions
+## Architecture technique
 
-9 Régiments
+### Nombre total de processus
 
-45 Compagnies
+- 1 processus Armée
+- 3 processus Divisions
+- 9 processus Régiments
+- 45 processus Compagnies
 
-➡ Total : 58 processus concurrents
+Total : **58 processus**
 
-Chaque structure est représentée par un processus distinct.
+---
 
-⚙ Fonctionnement de la simulation
-🪖 Compagnies
+## Fonctionnement de la simulation
 
-Chaque compagnie génère aléatoirement :
+### Compagnie
 
-Morts alliés
+Chaque compagnie :
+- Génère aléatoirement :
+  - Morts
+  - Blessés
+  - Ennemis morts
+  - Prisonniers
+  - Avancée (km)
+  - Recul (km)
+- Met à jour ses pertes en **mode cumulatif**
+- Protège l'accès à la mémoire partagée via un sémaphore
 
-Blessés alliés
+---
 
-Ennemis morts
-
-Prisonniers
-
-Les données sont écrites dans la mémoire partagée.
-
-🏹 Régiments
+### Régiment
 
 Chaque régiment :
+- Agrège les pertes cumulées de ses compagnies
+- Met à jour ses propres statistiques
+- Transmet à la division
 
-Lit les données de ses 5 compagnies
+---
 
-Calcule la somme des pertes
-
-Transmet les données à la division
-
-Affiche les valeurs transmises
-
-🏰 Divisions
+### Division
 
 Chaque division :
+- Agrège les pertes de ses régiments
+- Met à jour son état global
+- Transmet à l'armée
 
-Lit les données de ses 3 régiments
+---
 
-Calcule la somme globale
+### Armée (Général)
 
-Transmet à l’armée
+Toutes les 10 secondes :
+- Recalcule l'état global
+- Affiche :
+  - Pertes alliées
+  - Pertes ennemies
+  - Progression nette
+  - Classement des divisions
 
-Affiche les valeurs transmises
+---
 
-🎖 Armée (Général)
+## Concepts systèmes utilisés
 
-Toutes les 10 secondes, le général :
+### fork()
+Création hiérarchique réelle des processus.
 
-Lit les données des divisions
+### Mémoire partagée (System V)
+- `shmget`
+- `shmat`
+- `shmdt`
+- `shmctl`
 
-Calcule le total global
+Permet le partage des données entre tous les processus.
 
-Affiche l’état général de la conquête
+### Sémaphores (System V)
+- `semget`
+- `semop`
+- `semctl`
 
-🔐 Synchronisation
+Utilisation d'un mutex global pour éviter les conditions de course.
 
-Les accès à la mémoire partagée sont protégés par :
+### Signaux
+- SIGINT (Ctrl+C) : arrêt propre
+- SIGTERM : terminaison des processus enfants
 
-🔒 Un sémaphore binaire (mutex System V)
+### Nettoyage IPC
+Les ressources sont supprimées proprement à la fin :
 
-Cela garantit l'absence de race conditions lors des lectures/écritures concurrentes.
+- Suppression segment mémoire
+- Suppression sémaphore
 
-🧠 Gestion des signaux
-CTRL + C (SIGINT)
+---
 
-Le général intercepte le signal
+## Synchronisation
 
-Envoie un SIGTERM à tout le groupe de processus
+L'accès à la mémoire partagée est protégé par un sémaphore mutex :
 
-Attend la terminaison de tous les processus enfants
+- `P()` avant écriture
+- `V()` après écriture
 
-Affiche le rapport final
+Cela garantit :
 
-Libère proprement :
+- Aucune corruption mémoire
+- Pas de race condition
+- Cohérence des agrégations
 
-la mémoire partagée
+---
 
-le sémaphore
+## Compilation
 
-Sécurité
-
-Utilisation de _exit() dans les handlers
-
-Utilisation de write() (async-signal-safe)
-
-Pas de processus zombies
-
-Pas de fuite IPC
-
-📦 IPC utilisées
-Mémoire partagée
-
-Contient :
-
-Données des compagnies
-
-Données agrégées des régiments
-
-Données agrégées des divisions
-
-Sémaphore
-
-1 sémaphore binaire
-
-Protège toutes les sections critiques
-
-▶ Compilation
+```bash
+make clean
 make
-▶ Exécution
+▶Exécution
 ./simulation
 
-Ou :
+Appuyer sur Ctrl+C pour arrêter la simulation proprement.
 
-make run
-🛑 Arrêt de la simulation
+🧹 Nettoyage manuel IPC (si nécessaire)
 
-Appuyer sur :
+Si la simulation est interrompue brutalement :
 
-CTRL + C
+make clean_ipc
 
-Affichage :
+ou
 
-FIN DE LA CONQUETE
-Divisions  : 3
-Regiments  : 9
-Compagnies : 45
-Pertes alliees  : ...
-Pertes ennemies : ...
-Ressources IPC liberees.
+ipcrm -a
 
-Vérification :
+----- 
 
-ipcs
+## Vérification (à faire sur un autre terminal)
 
-➡ Aucun segment ni sémaphore restant.
-
-🧪 Vérification système
-Voir les processus :
 ps -ef | grep simulation
-Voir les IPC :
 ipcs
-🛠 Outils et technologies
 
-Langage C (C11)
+----- 
 
-Linux
+Exemple d'affichage après Ctrl+C sur Terminal 1
+===== ETAT DU GENERAL =====
+Allies  : morts=330 blesses=513
+Ennemis : morts=434 prisonniers=266
+Progression : avance=117km recul=63km net=54km
+===========================================
 
-fork()
+===== CLASSEMENT DES DIVISIONS =====
+1) Division D2 | net=22km | ...
+2) Division D1 | net=20km | ...
+3) Division D0 | net=12km | ...
 
-shmget / shmat / shmctl
+Exemple d'affichage après Ctrl+C sur Terminal 2
+===== ETAT DU GENERAL =====
+Allies  : morts=330 blesses=513
+Ennemis : morts=434 prisonniers=266
+Progression : avance=117km recul=63km net=54km
+===========================================
 
-semget / semop / semctl
+===== CLASSEMENT DES DIVISIONS =====
+1) Division D2 | net=22km | ...
+2) Division D1 | net=20km | ...
+3) Division D0 | net=12km | ...
+-----
 
-sigaction()
+Choix techniques et justification
 
-waitpid()
+Utilisation d'une mémoire partagée unique pour simplifier l'architecture
+Agrégation hiérarchique fidèle au modèle militaire
+Simulation cumulative pour refléter une conquête progressive
+Gestion propre des signaux pour éviter les processus zombies
+Nettoyage rigoureux des ressources IPC
 
-nanosleep()
-
-🎯 Points techniques importants
-
-Hiérarchie complète de processus
-
-Synchronisation correcte
-
-Nettoyage robuste des ressources IPC
-
-Gestion sécurisée des signaux
-
-Architecture conforme au scénario académique
-
-📚 Objectifs pédagogiques couverts
-
-✔ Programmation concurrente
-✔ Communication inter-processus
-✔ Synchronisation
-✔ Gestion des signaux
-✔ Gestion des ressources système
-✔ Architecture hiérarchique multi-processus
-
-👨‍🎓 Auteur
-
-Étudiant M1 Systèmes, Réseaux & Cloud Computing
-Programmation Systèmes sous Linux
+Réalisé par Karim GASMI
+M1 Systèmes, Réseaux & Cloud Computing - ESGI
+Programmation Système sous Linux - M. Malinge
