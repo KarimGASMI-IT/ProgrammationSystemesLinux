@@ -74,11 +74,11 @@ La mémoire partagée contient :
 
 Structure utilisée :
 
-
+````bash
 compagnies[3][3][5]
 regiments[3][3]
 divisions[3]
-
+```
 
 ---
 
@@ -207,17 +207,22 @@ make
 
 ## Arrêt
 Ctrl + C
+
 Nettoyage IPC (en cas de problème)
 
 ---
 
 ## Si le programme s’arrête mal :
 
+```bash
 make clean_ipc
+```
 
 ou :
 
+```bash
 ipcrm -a
+```
 
 ---
 
