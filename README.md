@@ -20,17 +20,6 @@ Le projet a été réalisé en **deux versions distinctes** afin d'améliorer pr
 
 ---
 
-## Organisation du dépôt
-
-
-ProgrammationSystemesLinux/
-├── V1/ → version initiale
-├── V2/ → version améliorée
-└── README.md
-
-
----
-
 ## V1 – Version initiale
 
 Cette version correspond à la première implémentation du projet.
