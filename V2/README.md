@@ -74,7 +74,7 @@ La mémoire partagée contient :
 
 Structure utilisée :
 
-````bash
+```bash
 compagnies[3][3][5]
 regiments[3][3]
 divisions[3]
