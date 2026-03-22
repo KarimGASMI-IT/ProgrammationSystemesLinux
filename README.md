@@ -107,5 +107,7 @@ Cela permet une meilleure exploitation du parallélisme et une simulation plus f
 ## Auteur
 
 Karim GASMI
+
 M1 Systèmes, Réseaux & Cloud Computing – ESGI
+
 Programmation Systèmes sous Linux – M. Malinge
