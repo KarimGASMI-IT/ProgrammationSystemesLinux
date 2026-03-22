@@ -196,25 +196,40 @@ Le général :
 ```bash
 make clean
 make
-Exécution
+```
+---
+
+## Exécution
+```bash
 ./simulation
-Arrêt
+```
+---
+
+## Arrêt
 Ctrl + C
 Nettoyage IPC (en cas de problème)
 
-Si le programme s’arrête mal :
+---
+
+## Si le programme s’arrête mal :
 
 make clean_ipc
 
 ou :
 
 ipcrm -a
-Vérifications
+
+---
+
+## Vérifications
+```bash
 ps -ef | grep simulation
 ipcs
+```
 
 Après arrêt, il ne doit rester aucun processus ni ressource IPC.
 
+```bash
 Exemple d’affichage
 ===== ETAT DU GENERAL (toutes les 10s) =====
 Allies  : morts=330 blesses=513
@@ -227,7 +242,9 @@ Progression : avance=117km recul=63km net=54km
 2) Division D1 | net=20km
 3) Division D0 | net=12km
 ====================================
-Choix techniques
+```
+
+## Choix techniques
 Pourquoi une mémoire partagée unique ?
 
 Simplifie l’architecture tout en respectant le sujet.
@@ -246,7 +263,10 @@ Pour éviter :
 
 les processus zombies
 les ressources IPC orphelines
-Auteur
+
+---
+
+## Auteur
 
 Karim GASMI
 M1 Systèmes, Réseaux & Cloud Computing – ESGI
