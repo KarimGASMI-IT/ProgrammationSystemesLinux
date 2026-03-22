@@ -200,9 +200,9 @@ Exécution
 ./simulation
 Arrêt
 Ctrl + C
-Nettoyage IPC manuel
+Nettoyage IPC (en cas de problème)
 
-En cas de problème :
+Si le programme s’arrête mal :
 
 make clean_ipc
 
