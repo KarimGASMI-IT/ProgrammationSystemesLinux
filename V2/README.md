@@ -1,6 +1,9 @@
 # ProgrammationSystemesLinux
 
-Évaluation M1 SRC / Programmation Systèmes sous Linux / Langage C / M. Malinge
+Évaluation M1 SRC – Programmation Systèmes sous Linux – Langage C  
+M. Malinge
+
+---
 
 # Simulation de conquête militaire
 
@@ -17,12 +20,12 @@ Chaque structure militaire est représentée par un **processus distinct**.
 
 Le programme repose sur :
 
-- la **mémoire partagée System V**
-- les **sémaphores System V**
-- les **signaux Unix**
+- la mémoire partagée System V
+- les sémaphores System V
+- les signaux Unix
 - la création hiérarchique de processus avec `fork()`
 
-Le général affiche l’état global de la conquête **toutes les 10 secondes**, conformément au sujet. Le sujet impose aussi des remontées d’informations non synchronisées depuis les compagnies jusqu’au général, et des échanges par mémoire partagée. :contentReference[oaicite:2]{index=2}
+Le général affiche l’état global de la conquête **toutes les 10 secondes**.
 
 ---
 
@@ -37,14 +40,12 @@ Chaque compagnie génère aléatoirement des informations de combat :
 - avancée en kilomètres
 - recul en kilomètres
 
-Ces informations sont ensuite remontées dans la hiérarchie :
+Ces informations sont remontées dans la hiérarchie :
 
 - les compagnies mettent à jour leur régiment
-- les régiments agrègent les données de leurs compagnies
-- les divisions agrègent les données de leurs régiments
-- l’armée affiche périodiquement un état général
-
-Cette progression en kilomètres correspond bien à l’évolution possible mentionnée dans le sujet. :contentReference[oaicite:3]{index=3}
+- les régiments agrègent les données
+- les divisions agrègent les résultats
+- l’armée affiche un état global périodique
 
 ---
 
@@ -67,26 +68,28 @@ Cette progression en kilomètres correspond bien à l’évolution possible ment
 
 La mémoire partagée contient :
 
-- les statistiques cumulées des compagnies
-- les statistiques cumulées des régiments
-- les statistiques cumulées des divisions
+- les statistiques des compagnies
+- les statistiques des régiments
+- les statistiques des divisions
 
 Structure utilisée :
 
-- `compagnies[3][3][5]`
-- `regiments[3][3]`
-- `divisions[3]`
+
+compagnies[3][3][5]
+regiments[3][3]
+divisions[3]
+
 
 ---
 
 ## Synchronisation
 
-Dans cette version, la synchronisation est plus fine que dans une version à mutex global.
+Cette version utilise une synchronisation **fine**.
 
 ### Sémaphores utilisés
 
-- **1 sémaphore par régiment**
-- **1 sémaphore par division**
+- 1 sémaphore par régiment
+- 1 sémaphore par division
 
 Soit :
 
@@ -96,9 +99,13 @@ Soit :
 
 ### Avantage
 
-Deux régiments différents peuvent travailler en parallèle sans se bloquer inutilement.
+Deux régiments différents peuvent travailler en parallèle sans se bloquer.
 
-Cela rend l’architecture plus propre et plus proche d’une vraie logique système, tout en restant simple à comprendre.
+Cela améliore :
+
+- le parallélisme
+- la fluidité de la simulation
+- la cohérence avec une architecture système réelle
 
 ---
 
@@ -109,77 +116,78 @@ Cela rend l’architecture plus propre et plus proche d’une vraie logique syst
 Chaque compagnie :
 
 - génère des pertes aléatoires
-- ajoute ses pertes à son cumul
-- met à jour la mémoire partagée protégée par le sémaphore de son régiment
-- affiche son activité avec horodatage
+- met à jour son état
+- écrit en mémoire partagée (protégée par son sémaphore)
+- affiche son activité
+
+---
 
 ### Régiment
 
 Chaque régiment :
 
 - crée ses 5 compagnies
-- lit les données cumulées de ses compagnies
+- lit leurs données
 - agrège les pertes
-- met à jour son état dans la mémoire partagée
-- transmet son état à la division
+- met à jour son état
+- transmet à la division
+
+---
 
 ### Division
 
 Chaque division :
 
 - crée ses 3 régiments
-- lit les états des régiments
+- lit leurs états
 - agrège les résultats
 - met à jour son état
-- transmet son état à l’armée
+- transmet à l’armée
+
+---
 
 ### Armée
 
 Le général :
 
-- crée les 3 divisions
+- crée les divisions
 - lit les états des divisions
 - calcule le total global
-- affiche l’état de la conquête toutes les 10 secondes
-- affiche aussi le classement des divisions selon leur progression nette
+- affiche l’état toutes les 10 secondes
+- affiche un classement des divisions
 
 ---
 
 ## Concepts systèmes utilisés
 
-### `fork()`
+### Processus
+- `fork()`
 
-Création hiérarchique réelle des processus.
-
-### Mémoire partagée System V
-
+### Mémoire partagée (System V)
 - `shmget`
 - `shmat`
 - `shmdt`
 - `shmctl`
 
-Elle permet aux processus de partager le même état global.
-
-### Sémaphores System V
-
+### Sémaphores (System V)
 - `semget`
 - `semop`
 - `semctl`
 
-Ils protègent les accès concurrents aux zones partagées.
-
 ### Signaux
+- `SIGINT` : arrêt avec Ctrl+C
+- `SIGTERM` : terminaison des processus
 
-- `SIGINT` : arrêt propre avec `Ctrl+C`
-- `SIGTERM` : terminaison des processus enfants
+---
 
-### Nettoyage IPC
+## Arrêt et nettoyage
 
 À la fin du programme :
 
-- suppression du segment de mémoire partagée
+- arrêt de tous les processus
+- affichage du bilan final
+- suppression de la mémoire partagée
 - suppression des sémaphores
-- arrêt propre de tous les processus enfants
 
 ---
 
@@ -190,33 +198,24 @@ make clean
 make
 Exécution
 ./simulation
-
-Pour arrêter la simulation proprement :
-
-Ctrl+C
+Arrêt
+Ctrl + C
 Nettoyage IPC manuel
 
-Si le programme a été interrompu brutalement :
+En cas de problème :
 
 make clean_ipc
 
 ou :
 
 ipcrm -a
-Vérifications utiles
-
-Dans un autre terminal :
-
+Vérifications
 ps -ef | grep simulation
 ipcs
+
+Après arrêt, il ne doit rester aucun processus ni ressource IPC.
+
 Exemple d’affichage
-=== DEBUT DE LA SIMULATION ===
-Appuyez sur Ctrl+C pour arreter.
-
-[12:17:01] Compagnie C0 R1 D2 : +morts=5 +blesses=2 +ennemis=10 +prisonniers=5 +avance=2km +recul=1km
-[12:17:01] Regiment R1 (Division D2) transmet : morts=5 blesses=2 ennemis=10 prisonniers=5 net=1km
-[12:17:02] Division D2 transmet a l'armee : morts=5 blesses=2 ennemis=10 prisonniers=5 net=1km
-
 ===== ETAT DU GENERAL (toutes les 10s) =====
 Allies  : morts=330 blesses=513
 Ennemis : morts=434 prisonniers=266
@@ -224,22 +223,22 @@ Progression : avance=117km recul=63km net=54km
 ===========================================
 
 ===== CLASSEMENT DES DIVISIONS =====
-1) Division D2 | net=22km | morts=100 blesses=160 | ennemis=150 | prisonniers=80
-2) Division D1 | net=20km | morts=115 blesses=170 | ennemis=140 | prisonniers=90
-3) Division D0 | net=12km | morts=115 blesses=183 | ennemis=144 | prisonniers=96
+1) Division D2 | net=22km
+2) Division D1 | net=20km
+3) Division D0 | net=12km
 ====================================
 Choix techniques
 Pourquoi une mémoire partagée unique ?
 
-Parce qu’elle simplifie l’architecture tout en restant fidèle au sujet.
+Simplifie l’architecture tout en respectant le sujet.
 
 Pourquoi plusieurs sémaphores ?
 
-Pour éviter qu’un seul verrou global bloque toute la simulation.
+Évite les blocages liés à un verrou global unique.
 
 Pourquoi une simulation cumulative ?
 
-Parce qu’elle représente bien une conquête progressive où les pertes et la progression s’accumulent dans le temps.
+Représente une progression continue dans le temps.
 
 Pourquoi gérer Ctrl+C proprement ?
 
@@ -247,9 +246,8 @@ Pour éviter :
 
 les processus zombies
 les ressources IPC orphelines
-les segments de mémoire ou sémaphores laissés dans le système
 Auteur
 
 Karim GASMI
-M1 Systèmes, Réseaux & Cloud Computing - ESGI
-Programmation Système sous Linux - M. Malinge
+M1 Systèmes, Réseaux & Cloud Computing – ESGI
+Programmation Systèmes sous Linux – M. Malinge
