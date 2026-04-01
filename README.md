@@ -1,7 +1,6 @@
 # ProgrammationSystemesLinux
 
-Évaluation M1 SRC – Programmation Systèmes sous Linux – Langage C  
-M. Malinge
+Évaluation M1 SRC – Programmation Systèmes sous Linux – Langage C - M. Malinge
 
 ---
 
